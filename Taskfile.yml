@@ -1,0 +1,53 @@
+version: "3"
+
+vars:
+  IMAGE_NAME: ghcr.io/{{.GITHUB_REPOSITORY}}
+  DOCKERFILE: Dockerfile
+  VOLUME_NAME: youtube-downloader-downloads
+
+tasks:
+  default:
+    cmds:
+      - task --list-all
+
+  build:
+    desc: Build the Docker image locally
+    cmds:
+      - docker build -t {{.IMAGE_NAME}}:local -f {{.DOCKERFILE}} .
+
+  run:
+    desc: Run the Docker container locally
+    cmds:
+      - docker volume create {{.VOLUME_NAME}} || true
+      - docker compose run --build
+
+  login:
+    desc: Login to GitHub Container Registry
+    cmds:
+      - echo "Logging in to GitHub Container Registry..."
+      - echo "{{.GITHUB_TOKEN}}" | docker login ghcr.io -u {{.GITHUB_USERNAME}} --password-stdin
+
+  push:
+    desc: Push the Docker image to GitHub Container Registry
+    cmds:
+      - task: login
+      - docker tag {{.IMAGE_NAME}}:local {{.IMAGE_NAME}}:latest
+      - docker push {{.IMAGE_NAME}}:latest
+
+  clean:
+    desc: Clean up Docker resources
+    cmds:
+      - docker rmi {{.IMAGE_NAME}}:local || true
+      - docker rmi {{.IMAGE_NAME}}:latest || true
+      - docker volume rm {{.VOLUME_NAME}} || true
+
+  compose:
+    desc: Manage Docker Compose services
+    cmds:
+      - docker-compose {{.ARGS}}
+
+  all:
+    desc: Build, push, and run the application
+    cmds:
+      - task: build
+      - task: push

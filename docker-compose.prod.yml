@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  bot:
+    image: ghcr.io/${GITHUB_REPOSITORY:-your-username/yt_downloader_bot}:latest
+    container_name: youtube-downloader-bot
+    env_file:
+      - .env
+    restart: always
+    volumes:
+      - downloads:/app/downloads
+    healthcheck:
+      test: ["CMD", "python", "-c", "import telegram; import yt_dlp"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1"
+        reservations:
+          memory: 128M
+          cpus: "0.25"
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+volumes:
+  downloads:
+    name: youtube-downloader-downloads
+    driver: local
+    driver_opts:
+      type: none
+      device: /var/lib/docker/volumes/youtube-downloader-downloads
+      o: bind
